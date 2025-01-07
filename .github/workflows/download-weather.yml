@@ -43,5 +43,5 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add docs/IDV60901.95867.json
-          git commit -m "Update weather data [skip ci]"
+          git commit -m "Update weather data"
           git push
