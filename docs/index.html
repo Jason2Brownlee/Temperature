@@ -6,6 +6,7 @@
   <title>Loading current temperature...</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -79,8 +80,6 @@
         const response = await fetch(apiUrl);
         const jsonData = await response.json();
 
-        // console.log('Current temperature data:', jsonData); // Debugging output
-
         const temp = jsonData.data?.temp;
         const location = jsonData.data?.station?.name;
         const time = jsonData.metadata?.observation_time ? new Date(jsonData.metadata.observation_time).toLocaleString() : 'Unknown time';
@@ -89,7 +88,7 @@
           const tempDiv = document.getElementById('currentTemp');
           const tempDetailsDiv = document.getElementById('currentTempDetails');
           tempDiv.textContent = `${temp.toFixed(1)}°C`;
-          tempDiv.style.color = getTempColor(temp);
+          tempDiv.style.color = getTempColor(temp); // Apply gradient color based on temperature
           tempDetailsDiv.textContent = `Location: ${location}, Observed at: ${time}`;
 
           document.title = `${temp.toFixed(1)}°C`;
@@ -108,8 +107,6 @@
       try {
         const response = await fetch(apiUrl);
         const jsonData = await response.json();
-
-        // console.log('Forecast data:', jsonData); // Debugging output
 
         const forecastData = jsonData.data;
         if (!forecastData || !Array.isArray(forecastData)) {
@@ -180,7 +177,11 @@
               data: temperatures,
               borderColor: 'rgba(75, 192, 192, 1)',
               backgroundColor: 'rgba(75, 192, 192, 0.2)',
-              borderWidth: 2
+              borderWidth: 2,
+              fill: true,
+              pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+              pointRadius: 4,
+              pointHoverRadius: 6
             }
           ]
         },
@@ -192,6 +193,15 @@
             },
             annotation: {
               annotations: annotations
+            },
+            datalabels: {
+              align: 'top',
+              color: '#555',
+              font: {
+                size: 10
+              },
+              formatter: (value) => `${value}°C`,
+              display: true
             }
           },
           scales: {
@@ -209,7 +219,8 @@
               beginAtZero: false
             }
           }
-        }
+        },
+        plugins: [ChartDataLabels]
       });
     }
 
