@@ -1,168 +1,135 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Station Temperature Plot</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    <script>
-        async function fetchWeatherData() {
-            try {
-                const url = "./IDV60901.95867.json"; // Local file
-                const response = await fetch(url);
-                if (!response.ok) {
-                    document.getElementById("error").innerText = "Failed to load data from local file.";
-                    return;
-                }
-                const data = await response.json();
-
-                // Extract header info
-                const stationName = data.observations.header[0].name;
-                const lastUpdate = data.observations.header[0].refresh_message;
-                const currentTemp = data.observations.data[0].air_temp;
-
-                // Update document title with current temperature
-                document.title = `Current Temp: ${currentTemp}°C`;
-
-                // Display header info
-                document.getElementById("stationInfo").innerHTML = `<strong>Station:</strong> ${stationName} | <strong>Last Update:</strong> ${lastUpdate} | <strong>Current Temperature:</strong> ${currentTemp}°C`;
-
-                const observations = data.observations.data;
-                const temperatures = observations.map(obs => obs.air_temp);
-                const times = observations.map(obs => {
-                    return new Date(obs.local_date_time_full.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, "$1-$2-$3T$4:$5:$6"));
-                });
-
-                // Validate data
-                if (!times.length || !temperatures.length) {
-                    document.getElementById("error").innerText = "No valid data to display.";
-                    return;
-                }
-
-                // Group data by day
-                const dayBackgrounds = [];
-                let currentDay = times[0].getDate();
-                let isLightBackground = true;
-                times.forEach((time, index) => {
-                    if (time.getDate() !== currentDay) {
-                        currentDay = time.getDate();
-                        isLightBackground = !isLightBackground;
-                    }
-                    dayBackgrounds[index] = isLightBackground ? "rgba(220, 220, 220, 0.3)" : null;
-                });
-
-                // Calculate summary stats for each day
-                const groupedData = {};
-                observations.forEach(obs => {
-                    const date = obs.local_date_time_full.slice(0, 8); // Extract YYYYMMDD
-                    if (!groupedData[date]) {
-                        groupedData[date] = [];
-                    }
-                    groupedData[date].push(obs.air_temp);
-                });
-
-                const summaryData = Object.entries(groupedData).map(([date, temps]) => {
-                    const minTemp = Math.min(...temps);
-                    const maxTemp = Math.max(...temps);
-                    const meanTemp = (temps.reduce((a, b) => a + b, 0) / temps.length).toFixed(2);
-                    return { date, minTemp, maxTemp, meanTemp };
-                });
-
-                // Create chart with background annotations for each day
-                const ctx = document.getElementById('temperatureChart').getContext('2d');
-                const chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: times,
-                        datasets: [{
-                            label: 'Temperature (°C)',
-                            data: temperatures,
-                            borderColor: 'blue',
-                            borderWidth: 1,
-                            fill: false,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            annotation: {
-                                annotations: times.map((time, index) => {
-                                    return dayBackgrounds[index]
-                                        ? {
-                                            type: 'box',
-                                            xMin: time.getTime(),
-                                            xMax: index < times.length - 1 ? times[index + 1].getTime() : time.getTime() + 86400000,
-                                            backgroundColor: dayBackgrounds[index]
-                                        }
-                                        : null;
-                                }).filter(Boolean)
-                            }
-                        },
-                        scales: {
-                            x: {
-                                type: 'time',
-                                title: {
-                                    display: true,
-                                    text: 'Time'
-                                },
-                                time: {
-                                    unit: 'day',
-                                    displayFormats: {
-                                        day: 'dd/MM'
-                                    }
-                                }
-                            },
-                            y: {
-                                title: {
-                                    display: true,
-                                    text: 'Temperature (°C)'
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // Populate summary table
-                const tableBody = document.getElementById('summaryTableBody');
-                tableBody.innerHTML = ""; // Clear previous data
-                summaryData.forEach(({ date, minTemp, maxTemp, meanTemp }) => {
-                    const row = `<tr>
-                        <td>${date}</td>
-                        <td>${minTemp}°C</td>
-                        <td>${maxTemp}°C</td>
-                        <td>${meanTemp}°C</td>
-                    </tr>`;
-                    tableBody.innerHTML += row;
-                });
-            } catch (error) {
-                console.error("Error fetching weather data:", error);
-                document.getElementById("error").innerText = "Failed to load weather data.";
-            }
-        }
-
-        window.onload = fetchWeatherData;
-    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loading current temperature...</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #currentTemp {
+      font-size: 5em;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    #currentTempDetails {
+      font-size: 1.2em;
+      text-align: center;
+      color: #555;
+      margin-bottom: 20px;
+    }
+    canvas {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
 </head>
 <body>
-    <h1>Weather Station Temperature Plot</h1>
-    <p id="stationInfo"></p>
-    <p id="error" style="color: red;"></p>
-    <canvas id="temperatureChart" width="400" height="200"></canvas>
+  <h1>Weather Forecast</h1>
+  <div id="currentTemp">Loading current temperature...</div>
+  <div id="currentTempDetails">Fetching location and time...</div>
+  <canvas id="forecastChart"></canvas>
 
-    <h2>Summary Table</h2>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Date (YYYYMMDD)</th>
-                <th>Min Temperature (°C)</th>
-                <th>Max Temperature (°C)</th>
-                <th>Mean Temperature (°C)</th>
-            </tr>
-        </thead>
-        <tbody id="summaryTableBody">
-            <!-- Summary data will be inserted here -->
-        </tbody>
-    </table>
+  <script>
+    function getTempColor(temp) {
+      const minTemp = 0; // Minimum temperature for color scale
+      const maxTemp = 45; // Maximum temperature for color scale
+      const percentage = Math.min(Math.max((temp - minTemp) / (maxTemp - minTemp), 0), 1);
+      const red = Math.floor(percentage * 255);
+      const blue = Math.floor((1 - percentage) * 255);
+      const green = Math.floor(128 - Math.abs(percentage - 0.5) * 255);
+      return `rgb(${red}, ${green}, ${blue})`;
+    }
+
+    async function fetchCurrentTemperature() {
+      const apiUrl = 'https://api.weather.bom.gov.au/v1/locations/r1r293/observations';
+
+      try {
+        const response = await fetch(apiUrl);
+        const jsonData = await response.json();
+        const temp = jsonData.data.temp;
+        const location = jsonData.data.station.name;
+        const time = new Date(jsonData.metadata.observation_time).toLocaleString();
+
+        const tempDiv = document.getElementById('currentTemp');
+        const tempDetailsDiv = document.getElementById('currentTempDetails');
+        tempDiv.textContent = `${temp.toFixed(1)}°C`;
+        tempDiv.style.color = getTempColor(temp);
+        tempDetailsDiv.textContent = `Location: ${location}, Observed at: ${time}`;
+
+        document.title = `Current Temperature: ${temp.toFixed(1)}°C`;
+      } catch (error) {
+        console.error('Error fetching current temperature:', error);
+      }
+    }
+
+    async function fetchWeatherData() {
+      const apiUrl = 'https://api.weather.bom.gov.au/v1/locations/r1r293/forecasts/hourly';
+
+      try {
+        const response = await fetch(apiUrl);
+        const jsonData = await response.json();
+
+        const forecastData = jsonData.data;
+        const labels = forecastData.map(forecast => new Date(forecast.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        const temperatures = forecastData.map(forecast => forecast.temp);
+
+        plotForecastChart(labels, temperatures);
+      } catch (error) {
+        console.error('Error fetching weather data:', error);
+      }
+    }
+
+    function plotForecastChart(labels, temperatures) {
+      const ctx = document.getElementById('forecastChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Temperature (°C)',
+              data: temperatures,
+              borderColor: 'rgba(75, 192, 192, 1)',
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: true
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Time'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Temperature (°C)'
+              },
+              beginAtZero: false
+            }
+          }
+        }
+      });
+    }
+
+    // Fetch and display the current temperature
+    fetchCurrentTemperature();
+
+    // Fetch and plot the weather data when the page loads
+    fetchWeatherData();
+  </script>
 </body>
 </html>
