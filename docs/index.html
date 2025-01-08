@@ -18,7 +18,7 @@
       margin-bottom: 10px;
     }
     #currentTempDetails {
-      font-size: 1.2em;
+      font-size: 1.0em;
       text-align: center;
       color: #555;
       margin-bottom: 20px;
@@ -38,7 +38,7 @@
     }
     canvas {
       max-width: 100%;
-      height: auto;
+      max-height: 400px;
     }
     table {
       width: 100%;
@@ -55,13 +55,17 @@
     th {
       background-color: #f4f4f4;
     }
+    .icon-cell {
+      font-size: 2em;
+    }
   </style>
 </head>
 <body>
-  <h1>Weather Forecast</h1>
+  <h1>Vermont Weather Forecast</h1>
   <div id="currentTemp">Loading current temperature...</div>
   <div id="currentTempDetails">Fetching location and time...</div>
 
+  Forecast Next 8 Hours:
   <table id="todayForecastTable">
     <thead>
       <tr id="todayForecastHours"></tr>
@@ -72,17 +76,15 @@
     </tbody>
   </table>
 
+  Forecast Next 24 Hours:
   <canvas id="forecastChart"></canvas>
-  <table id="forecastTable">
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Day of Week</th>
-        <th>Min Temp (°C)</th>
-        <th>Max Temp (°C)</th>
-      </tr>
-    </thead>
+
+  Forecast Next 4 Days:
+  <table id="forecastSummaryTable">
     <tbody>
+      <tr id="forecastDays"></tr>
+      <tr id="forecastTemps"></tr>
+      <tr id="forecastIcons"></tr>
     </tbody>
   </table>
 
@@ -123,7 +125,7 @@
           const tempDetailsDiv = document.getElementById('currentTempDetails');
           tempDiv.textContent = `${temp.toFixed(1)}°C`;
           tempDiv.style.color = getTempColor(temp); // Apply gradient color based on temperature
-          tempDetailsDiv.textContent = `Location: ${location}, Observed at: ${time}`;
+          tempDetailsDiv.textContent = `Observation: ${location} at ${time}`;
 
           document.title = `${temp.toFixed(1)}°C`;
         } else {
@@ -147,20 +149,33 @@
           throw new Error('Invalid forecast data');
         }
 
-        const today = new Date().toDateString();
-        const todayForecast = forecastData.filter(forecast => new Date(forecast.time).toDateString() === today);
+        // Limit data for the next 8 hours
+        const now = new Date();
+        const next8Hours = forecastData.filter(forecast => {
+          const forecastTime = new Date(forecast.time);
+          return forecastTime - now <= 8 * 60 * 60 * 1000;
+        });
 
         const hoursRow = document.getElementById('todayForecastHours');
         const tempsRow = document.getElementById('todayForecastTemps');
         const iconsRow = document.getElementById('todayForecastIcons');
 
-        hoursRow.innerHTML = '<th>Hour</th>' + todayForecast.map(forecast => `<th>${new Date(forecast.time).getHours()}:00</th>`).join('');
-        tempsRow.innerHTML = '<td>Temp (°C)</td>' + todayForecast.map(forecast => `<td>${forecast.temp.toFixed(1)}</td>`).join('');
-        iconsRow.innerHTML = '<td>Icon</td>' + todayForecast.map(forecast => `<td>${iconMap[forecast.icon_descriptor] || iconMap.default}</td>`).join('');
+        hoursRow.innerHTML = '<th>Hour</th>' + next8Hours.map(forecast => `<th>${new Date(forecast.time).getHours()}:00</th>`).join('');
+        tempsRow.innerHTML = '<td>Temp (°C)</td>' + next8Hours.map(forecast => `<td>${forecast.temp.toFixed(1)}</td>`).join('');
+        iconsRow.innerHTML = '<td>Icon</td>' + next8Hours.map(forecast => `<td class="icon-cell">${iconMap[forecast.icon_descriptor] || iconMap.default}</td>`).join('');
 
-        const labels = forecastData.map(forecast => new Date(forecast.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        const temperatures = forecastData.map(forecast => forecast.temp);
+        // Limit data for the next 24 hours for the plot
+        const next24Hours = forecastData.filter(forecast => {
+          const forecastTime = new Date(forecast.time);
+          return forecastTime - now <= 24 * 60 * 60 * 1000;
+        });
 
+        const labels = next24Hours.map(forecast => new Date(forecast.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        const temperatures = next24Hours.map(forecast => forecast.temp);
+
+        plotForecastChart(labels, temperatures);
+
+        // Daily summary
         const dayData = {};
 
         forecastData.forEach(forecast => {
@@ -169,48 +184,32 @@
 
           if (!dayData[dayKey]) {
             dayData[dayKey] = {
-              date: date.toLocaleDateString(),
               day: date.toLocaleDateString(undefined, { weekday: 'long' }),
-              temps: []
+              temps: [],
+              icon_descriptor: forecast.icon_descriptor
             };
           }
           dayData[dayKey].temps.push(forecast.temp);
         });
 
-        const tableBody = document.getElementById('forecastTable').querySelector('tbody');
-        tableBody.innerHTML = '';
+        const daysRow = document.getElementById('forecastDays');
+        const tempsRowSummary = document.getElementById('forecastTemps');
+        const iconsRowSummary = document.getElementById('forecastIcons');
 
-        const annotations = [];
+        daysRow.innerHTML = '<th>Day</th>' + Object.values(dayData).map(day => `<td>${day.day}</td>`).join('');
+        tempsRowSummary.innerHTML = '<td>Min/Max Temp (°C)</td>' + Object.values(dayData).map(day => {
+          const minTemp = Math.min(...day.temps).toFixed(1);
+          const maxTemp = Math.max(...day.temps).toFixed(1);
+          return `<td>${minTemp} | ${maxTemp}</td>`;
+        }).join('');
+        iconsRowSummary.innerHTML = '<td>Icon</td>' + Object.values(dayData).map(day => `<td class="icon-cell">${iconMap[day.icon_descriptor] || iconMap.default}</td>`).join('');
 
-        Object.values(dayData).forEach((day, index) => {
-          const minTemp = Math.min(...day.temps);
-          const maxTemp = Math.max(...day.temps);
-          tableBody.innerHTML += `<tr><td>${day.date}</td><td>${day.day}</td><td>${minTemp.toFixed(1)}</td><td>${maxTemp.toFixed(1)}</td></tr>`;
-
-          if (index > 0) {
-            annotations.push({
-              type: 'line',
-              scaleID: 'x',
-              value: labels[forecastData.findIndex(f => new Date(f.time).toDateString() === day.date)],
-              borderColor: 'red',
-              borderWidth: 1,
-              label: {
-                display: true,
-                content: day.day,
-                position: 'end'
-              }
-            });
-          }
-        });
-
-        plotForecastChart(labels, temperatures, annotations);
       } catch (error) {
         console.error('Error fetching weather data:', error);
-        document.getElementById('forecastTable').innerHTML = '<tr><td colspan="4">Error loading forecast data</td></tr>';
       }
     }
 
-    function plotForecastChart(labels, temperatures, annotations) {
+    function plotForecastChart(labels, temperatures) {
       const ctx = document.getElementById('forecastChart').getContext('2d');
       new Chart(ctx, {
         type: 'line',
@@ -234,16 +233,13 @@
           responsive: true,
           plugins: {
             legend: {
-              display: true
-            },
-            annotation: {
-              annotations: annotations
+              display: false
             },
             datalabels: {
               align: 'top',
               color: '#555',
               font: {
-                size: 10
+                size: 15
               },
               formatter: (value) => `${value}°C`,
               display: true
