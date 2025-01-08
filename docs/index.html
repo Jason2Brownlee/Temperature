@@ -68,6 +68,7 @@
     </thead>
     <tbody>
       <tr id="todayForecastTemps"></tr>
+      <tr id="todayForecastIcons"></tr>
     </tbody>
   </table>
 
@@ -86,6 +87,16 @@
   </table>
 
   <script>
+    const iconMap = {
+      sunny: "☀️",
+      mostly_sunny: "🌤️",
+      cloudy: "☁️",
+      shower: "🌧️",
+      storm: "⛈️",
+      snow: "❄️",
+      default: "🌈" // Default icon if descriptor is missing
+    };
+
     function getTempColor(temp) {
       const minTemp = 0; // Minimum temperature for color scale
       const maxTemp = 45; // Maximum temperature for color scale
@@ -141,9 +152,11 @@
 
         const hoursRow = document.getElementById('todayForecastHours');
         const tempsRow = document.getElementById('todayForecastTemps');
+        const iconsRow = document.getElementById('todayForecastIcons');
 
         hoursRow.innerHTML = '<th>Hour</th>' + todayForecast.map(forecast => `<th>${new Date(forecast.time).getHours()}:00</th>`).join('');
         tempsRow.innerHTML = '<td>Temp (°C)</td>' + todayForecast.map(forecast => `<td>${forecast.temp.toFixed(1)}</td>`).join('');
+        iconsRow.innerHTML = '<td>Icon</td>' + todayForecast.map(forecast => `<td>${iconMap[forecast.icon_descriptor] || iconMap.default}</td>`).join('');
 
         const labels = forecastData.map(forecast => new Date(forecast.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         const temperatures = forecastData.map(forecast => forecast.temp);
