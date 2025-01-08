@@ -492,6 +492,11 @@
     // Fetch the data right away
     fetchCurrentTemperature();
     fetchWeatherData();
+
+    // Reload every 5 minutes (5 * 60 * 1000 ms)
+    setTimeout(() => {
+      location.reload();
+    }, 5 * 60 * 1000);
   </script>
 </body>
 </html>
