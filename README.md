@@ -12,6 +12,6 @@ Visit: https://jasonbrownlee.me/Temperature/
 ### APIs
 
 * https://github.com/tonyallan/weather-au/blob/master/weather_au/api.py
-* https://api.weather.bom.gov.au/v1/locations?search=SCORESBY
-* https://api.weather.bom.gov.au/v1/locations/r1r293/forecasts/hourly
-* https://api.weather.bom.gov.au/v1/locations/r1r293/observations
+* https://api.weather.bom.gov.au/v1/locations?search=vermont
+* https://api.weather.bom.gov.au/v1/locations/r1r28p/forecasts/hourly
+* https://api.weather.bom.gov.au/v1/locations/r1r28p/observations
