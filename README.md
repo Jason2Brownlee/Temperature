@@ -5,3 +5,8 @@ The repository hosts and serves the files for a simple one-page website to summa
 **Update**: Added a suburb chooser, so that you can customize for where _you_ live!
 
 Visit: https://jasonbrownlee.me/Temperature/
+
+
+## Screenshot
+
+![](pics/Screenshot.png)
