@@ -23,6 +23,19 @@
       color: #555;
       margin-bottom: 20px;
     }
+    #todayForecastTable {
+      margin: 20px 0;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #todayForecastTable th, #todayForecastTable td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+    #todayForecastTable th {
+      background-color: #f4f4f4;
+    }
     canvas {
       max-width: 100%;
       height: auto;
@@ -48,6 +61,16 @@
   <h1>Weather Forecast</h1>
   <div id="currentTemp">Loading current temperature...</div>
   <div id="currentTempDetails">Fetching location and time...</div>
+
+  <table id="todayForecastTable">
+    <thead>
+      <tr id="todayForecastHours"></tr>
+    </thead>
+    <tbody>
+      <tr id="todayForecastTemps"></tr>
+    </tbody>
+  </table>
+
   <canvas id="forecastChart"></canvas>
   <table id="forecastTable">
     <thead>
@@ -112,6 +135,15 @@
         if (!forecastData || !Array.isArray(forecastData)) {
           throw new Error('Invalid forecast data');
         }
+
+        const today = new Date().toDateString();
+        const todayForecast = forecastData.filter(forecast => new Date(forecast.time).toDateString() === today);
+
+        const hoursRow = document.getElementById('todayForecastHours');
+        const tempsRow = document.getElementById('todayForecastTemps');
+
+        hoursRow.innerHTML = '<th>Hour</th>' + todayForecast.map(forecast => `<th>${new Date(forecast.time).getHours()}:00</th>`).join('');
+        tempsRow.innerHTML = '<td>Temp (°C)</td>' + todayForecast.map(forecast => `<td>${forecast.temp.toFixed(1)}</td>`).join('');
 
         const labels = forecastData.map(forecast => new Date(forecast.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         const temperatures = forecastData.map(forecast => forecast.temp);
