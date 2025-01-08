@@ -123,7 +123,7 @@
 </head>
 <body>
   <div id="topRightInfo">
-    Location: <span id="selectedSuburbInfo"></span>
+    Suburb: <span id="selectedSuburbInfo"></span>
     <a id="changeLink">(change)</a>
   </div>
 
@@ -131,7 +131,7 @@
   <div id="currentTemp">Loading current temperature...</div>
   <div id="currentTempDetails">Fetching location and time...</div>
 
-  <p>Forecast Next 8 Hours:</p>
+  <p>Forecast Next Few Hours:</p>
   <table id="todayForecastTable">
     <thead>
       <tr id="todayForecastHours"></tr>
@@ -145,7 +145,7 @@
   <p>Forecast Next 24 Hours:</p>
   <canvas id="forecastChart"></canvas>
 
-  <p>Forecast Next 4 Days:</p>
+  <p>Forecast Next Few Days:</p>
   <table id="forecastSummaryTable">
     <tbody>
       <tr id="forecastDays"></tr>
@@ -373,20 +373,35 @@
           throw new Error('Invalid forecast data');
         }
 
-        // Limit data for the next 8 hours
+        // 1) Detect if we're on a small screen
+        const isMobile = window.innerWidth < 600;
+        // 2) Decide how many hours to show
+        const hoursToShow = isMobile ? 4 : 8;
+
+        // 3) Filter for next 8 hours, then limit to hoursToShow
         const now = new Date();
-        const next8Hours = forecastData.filter(forecast => {
+        let next8Hours = forecastData.filter(forecast => {
           const forecastTime = new Date(forecast.time);
           return forecastTime - now <= 8 * 60 * 60 * 1000;
         });
+        next8Hours = next8Hours.slice(0, hoursToShow);
 
+        // Build table rows/columns with next8Hours
         const hoursRow = document.getElementById('todayForecastHours');
         const tempsRow = document.getElementById('todayForecastTemps');
         const iconsRow = document.getElementById('todayForecastIcons');
 
-        hoursRow.innerHTML = '<th>Hour</th>' + next8Hours.map(forecast => `<th>${new Date(forecast.time).getHours()}:00</th>`).join('');
-        tempsRow.innerHTML = '<td>Temp (°C)</td>' + next8Hours.map(forecast => `<td>${forecast.temp.toFixed(1)}</td>`).join('');
-        iconsRow.innerHTML = '<td>Icon</td>' + next8Hours.map(forecast => `<td class="icon-cell">${iconMap[forecast.icon_descriptor] || iconMap.default}</td>`).join('');
+        hoursRow.innerHTML = '<th>Hour</th>' + next8Hours.map(forecast => {
+          return `<th>${new Date(forecast.time).getHours()}:00</th>`;
+        }).join('');
+
+        tempsRow.innerHTML = '<td>Temp (°C)</td>' + next8Hours.map(forecast => {
+          return `<td>${forecast.temp.toFixed(1)}</td>`;
+        }).join('');
+
+        iconsRow.innerHTML = '<td>Icon</td>' + next8Hours.map(forecast => {
+          return `<td class="icon-cell">${iconMap[forecast.icon_descriptor] || iconMap.default}</td>`;
+        }).join('');
 
         // Limit data for the next 24 hours for the plot
         const next24Hours = forecastData.filter(forecast => {
@@ -460,14 +475,17 @@
               display: false
             },
             datalabels: {
-              align: 'top',
-              color: '#555',
-              font: {
-                size: 15
-              },
-              formatter: (value) => `${value}°C`,
-              display: true
-            }
+                // Only display labels if width > 600px
+                display: (context) => {
+                  return window.innerWidth > 600;
+                },
+                align: 'top',
+                color: '#555',
+                font: {
+                  size: 15
+                },
+                formatter: (value) => `${value}°C`
+              }
           },
           scales: {
             x: {
