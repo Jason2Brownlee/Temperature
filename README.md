@@ -13,10 +13,10 @@ You can update the "site" for your preferred weather station. Here's how:
 	2. Change the search string from `vermont` to `<your suburb>`, use `+` for space if needed.
 	3. On the loaded page, find and copy the value of `geohash`, e.g. `r1r28pf`
 	4. Remove the last character from the `geohash`, e.g. `r1r28p`
-2. Update docs/index.html for your the `geohash` for your suburb name.
+2. Update `docs/index.html` for your the `geohash` for your suburb name.
 	1. Change the observation API URL to use your `geohash` in the `fetchCurrentTemperature()` function: `'https://api.weather.bom.gov.au/v1/locations/r1r28p/observations'`
-	2. Change the forecast API URL to use your `geohash` in the `fetchWeatherData()` function: 'https://api.weather.bom.gov.au/v1/locations/r1r28p/forecasts/hourly';
-	4. Save and load the index.html in your browser.
+	2. Change the forecast API URL to use your `geohash` in the `fetchWeatherData()` function: 'https://api.weather.bom.gov.au/v1/locations/r1r28p/forecasts/hourly'
+	4. Save and load the `index.html` in your browser.
 3. Host your modified `index.html` somewhere, like [GitHub pages](https://pages.github.com/).
 
 ## References
