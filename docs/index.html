@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Loading current temperature...</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
@@ -11,6 +11,7 @@
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
+      position: relative;
     }
     #currentTemp {
       font-size: 5em;
@@ -60,14 +61,77 @@
     .icon-cell {
       font-size: 2em;
     }
+
+    #topRightInfo {
+      position: absolute;
+      top: 0px;
+      right: 0px;
+      text-align: right;
+    }
+    #topRightInfo a {
+      text-decoration: underline;
+      cursor: pointer;
+      color: blue;
+    }
+
+    #changeModal {
+      display: none; /* Hidden by default */
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    #changeModalContent {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      width: 80%;
+      max-width: 600px;
+      border-radius: 5px;
+    }
+    #closeModalBtn {
+      float: right;
+      cursor: pointer;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    #searchResults {
+      margin-top: 20px;
+    }
+    .searchResultItem {
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .searchResultItem:hover {
+      background-color: #f2f2f2;
+    }
+    #footerMessage {
+      text-align: center;
+      padding: 10px;
+      margin-top: 100px;
+      color: #aaa;
+      background-color: #fefefe;
+      border-top: 1px solid #ddd;
+      font-size: 0.9em;
+    }
+
   </style>
 </head>
 <body>
-  <h1>Vermont Weather Forecast</h1>
+  <div id="topRightInfo">
+    Location: <span id="selectedSuburbInfo"></span>
+    <a id="changeLink">(change)</a>
+  </div>
+
+  <h1>Your Local Weather Forecast</h1>
   <div id="currentTemp">Loading current temperature...</div>
   <div id="currentTempDetails">Fetching location and time...</div>
 
-  Forecast Next 8 Hours:
+  <p>Forecast Next 8 Hours:</p>
   <table id="todayForecastTable">
     <thead>
       <tr id="todayForecastHours"></tr>
@@ -78,10 +142,10 @@
     </tbody>
   </table>
 
-  Forecast Next 24 Hours:
+  <p>Forecast Next 24 Hours:</p>
   <canvas id="forecastChart"></canvas>
 
-  Forecast Next 4 Days:
+  <p>Forecast Next 4 Days:</p>
   <table id="forecastSummaryTable">
     <tbody>
       <tr id="forecastDays"></tr>
@@ -90,7 +154,161 @@
     </tbody>
   </table>
 
+  <div id="changeModal">
+    <div id="changeModalContent">
+      <span id="closeModalBtn">&times;</span>
+      <h2>Change Location</h2>
+      <p>Enter a suburb name below to search:</p>
+      <input type="text" id="suburbSearchInput" style="width: 80%;" />
+      <button id="searchButton">Search</button>
+      <div id="searchResults"></div>
+    </div>
+  </div>
+
+  <div id="footerMessage">
+    Made with ❤️ by <a href="https://jasonbrownlee.me">Jason Brownlee</a> and ChatGPT. Powered by <a href="https://github.com/tonyallan/weather-au">BOM Weather API</a> &mdash; Have kick-ass great day!
+  </div>
+
+
   <script>
+    // ===========================
+    // == Cookie Helper Functions
+    // ===========================
+    function setCookie(name, value, days = 30) {
+      const d = new Date();
+      d.setTime(d.getTime() + (days*24*60*60*1000));
+      const expires = "expires="+ d.toUTCString();
+      document.cookie = name + "=" + value + ";" + expires + ";path=/";
+    }
+
+    function getCookie(name) {
+      const decodedCookie = decodeURIComponent(document.cookie);
+      const ca = decodedCookie.split(';');
+      name = name + "=";
+      for(let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') {
+          c = c.substring(1);
+        }
+        if (c.indexOf(name) === 0) {
+          return c.substring(name.length, c.length);
+        }
+      }
+      return "";
+    }
+
+    // ===========================
+    // == Global Vars / Defaults
+    // ===========================
+    let defaultSuburbName = "Vermont";
+    let defaultGeohash = "r1r28pf"; // We'll strip last char when calling API
+
+    // On page load, check if we have a saved suburb name and geohash
+    let savedSuburbName = getCookie("suburbName");
+    let savedGeohash = getCookie("geohash");
+
+    if (!savedSuburbName || !savedGeohash) {
+      // If no cookies, use defaults
+      savedSuburbName = defaultSuburbName;
+      savedGeohash = defaultGeohash;
+    }
+
+    // This is the geohash we actually use for BOM calls (strip last char if length >= 7)
+    let actualGeohash = savedGeohash.length >= 7
+      ? savedGeohash.substring(0, savedGeohash.length - 1)
+      : savedGeohash;
+
+    // ===========================
+    // == Populate top-right info
+    // ===========================
+    const selectedSuburbInfo = document.getElementById('selectedSuburbInfo');
+    selectedSuburbInfo.textContent = `${savedSuburbName}`;
+
+    // ===========================
+    // == Show/hide modal logic
+    // ===========================
+    const changeLink = document.getElementById('changeLink');
+    const changeModal = document.getElementById('changeModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const searchButton = document.getElementById('searchButton');
+    const suburbSearchInput = document.getElementById('suburbSearchInput');
+    const searchResultsDiv = document.getElementById('searchResults');
+
+    // Prefill the search box with the current suburb name
+    suburbSearchInput.value = savedSuburbName;
+
+    changeLink.onclick = () => {
+      searchResultsDiv.innerHTML = ""; // Clear previous search results
+      changeModal.style.display = "block";
+    };
+    closeModalBtn.onclick = () => {
+      changeModal.style.display = "none";
+    };
+    window.onclick = (event) => {
+      if (event.target === changeModal) {
+        changeModal.style.display = "none";
+      }
+    };
+
+    // ===========================
+    // == Searching for suburbs
+    // ===========================
+    async function searchSuburbs() {
+      const searchTerm = suburbSearchInput.value.trim();
+      if (!searchTerm) return;
+
+      searchResultsDiv.innerHTML = "Searching...";
+      try {
+        const searchUrl = 'https://api.weather.bom.gov.au/v1/locations?search=' + encodeURIComponent(searchTerm);
+        const response = await fetch(searchUrl);
+        const jsonData = await response.json();
+
+        if (!jsonData.data || !Array.isArray(jsonData.data) || jsonData.data.length === 0) {
+          searchResultsDiv.innerHTML = "No results found.";
+          return;
+        }
+
+        // We have results, show them
+        const resultsHtml = jsonData.data.map(loc => {
+          return `
+            <div class="searchResultItem" onclick="chooseSuburb('${loc.name}', '${loc.geohash}')">
+              <strong>${loc.name}</strong> [${loc.geohash}]
+              ${loc.postcode ? '- ' + loc.postcode : ''}
+              ${loc.state ? ', ' + loc.state : ''}
+            </div>`;
+        }).join('');
+
+        searchResultsDiv.innerHTML = resultsHtml;
+
+      } catch (error) {
+        console.error('Error searching for suburbs:', error);
+        searchResultsDiv.innerHTML = "Error searching for suburbs.";
+      }
+    }
+
+    // ===========================
+    // == Choose suburb & reload
+    // ===========================
+    function chooseSuburb(name, geohash) {
+      // Save to cookie
+      setCookie("suburbName", name);
+      setCookie("geohash", geohash);
+      // Reload page
+      location.reload();
+    }
+
+    // Attach search to button and 'Enter' key in input
+    searchButton.addEventListener('click', searchSuburbs);
+    suburbSearchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchSuburbs();
+      }
+    });
+
+    // ===========================
+    // == Existing Code Below
+    // ===========================
     const iconMap = {
       sunny: "☀️",
       mostly_sunny: "🌤️",
@@ -112,7 +330,8 @@
     }
 
     async function fetchCurrentTemperature() {
-      const apiUrl = 'https://api.weather.bom.gov.au/v1/locations/r1r28p/observations';
+      // Use actualGeohash in the URL
+      const apiUrl = 'https://api.weather.bom.gov.au/v1/locations/' + actualGeohash + '/observations';
 
       try {
         const response = await fetch(apiUrl);
@@ -120,7 +339,9 @@
 
         const temp = jsonData.data?.temp;
         const location = jsonData.data?.station?.name;
-        const time = jsonData.metadata?.observation_time ? new Date(jsonData.metadata.observation_time).toLocaleString() : 'Unknown time';
+        const time = jsonData.metadata?.observation_time
+          ? new Date(jsonData.metadata.observation_time).toLocaleString()
+          : 'Unknown time';
 
         if (temp !== undefined) {
           const tempDiv = document.getElementById('currentTemp');
@@ -140,7 +361,8 @@
     }
 
     async function fetchWeatherData() {
-      const apiUrl = 'https://api.weather.bom.gov.au/v1/locations/r1r28p/forecasts/hourly';
+      // Use actualGeohash in the URL
+      const apiUrl = 'https://api.weather.bom.gov.au/v1/locations/' + actualGeohash + '/forecasts/hourly';
 
       try {
         const response = await fetch(apiUrl);
@@ -202,7 +424,7 @@
         tempsRowSummary.innerHTML = '<td>Min/Max Temp (°C)</td>' + Object.values(dayData).map(day => {
           const minTemp = Math.min(...day.temps).toFixed(1);
           const maxTemp = Math.max(...day.temps).toFixed(1);
-          return `<td>${minTemp} | ${maxTemp}</td>`;
+          return `<td>${minTemp} | <strong>${maxTemp}</strong></td>`;
         }).join('');
         iconsRowSummary.innerHTML = '<td>Icon</td>' + Object.values(dayData).map(day => `<td class="icon-cell">${iconMap[day.icon_descriptor] || iconMap.default}</td>`).join('');
 
@@ -267,6 +489,7 @@
       });
     }
 
+    // Fetch the data right away
     fetchCurrentTemperature();
     fetchWeatherData();
   </script>
