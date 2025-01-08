@@ -1,4 +1,6 @@
-# Melbourne Temperature Graph
+# Vermont Temperature Forecast
+
+A simple one-page website to summarize the temperature forecast for the weather station (Scoresby, Victoria) closest to my house (Vermont, Victoria).
 
 Visit: https://jasonbrownlee.me/Temperature/
 
