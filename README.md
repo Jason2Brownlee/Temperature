@@ -7,6 +7,6 @@ The repository hosts and serves the files for a simple one-page website to summa
 Visit: https://jasonbrownlee.me/Temperature/
 
 
-## Screenshot
+## Screenshot:
 
 ![](pics/Screenshot.png)
