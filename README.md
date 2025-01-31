@@ -10,3 +10,9 @@ Visit: https://jasonbrownlee.me/Temperature/
 ## Screenshot:
 
 ![](pics/Screenshot.png)
+
+## Testing
+
+* https://api.weather.bom.gov.au/v1/locations/r1r28p/forecasts/hourly
+* https://api.weather.bom.gov.au/v1/locations/r1r28p/observations
+* https://api.weather.bom.gov.au/v1/locations?search=vermont
