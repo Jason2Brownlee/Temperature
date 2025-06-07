@@ -122,14 +122,8 @@
   </style>
 </head>
 <body>
-  <div id="topRightInfo">
-    Suburb: <span id="selectedSuburbInfo"></span>
-    <a id="changeLink">(change)</a>
-  </div>
-
-  <h1>Temperature Forecast</h1>
-  <div id="currentTemp">Loading current temperature...</div>
-  <div id="currentTempDetails">Fetching location and time...</div>
+  <div id="currentTemp">Loading...</div>
+  <div id="currentTempDetails">Fetching...</div>
 
   <p>Forecast Next Few Hours:</p>
   <table id="todayForecastTable">
@@ -163,6 +157,11 @@
       <button id="searchButton">Search</button>
       <div id="searchResults"></div>
     </div>
+  </div>
+
+  <div id="topRightInfo">
+    <small><span id="selectedSuburbInfo"></span><br />
+    <a id="changeLink">(change)</a></small>
   </div>
 
   <div id="footerMessage">
