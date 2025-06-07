@@ -165,7 +165,8 @@
   </div>
 
   <div id="footerMessage">
-    Made with ❤️ by <a href="https://jasonbrownlee.me">Jason Brownlee</a> and ChatGPT. Powered by <a href="https://github.com/tonyallan/weather-au">BOM Weather API</a> &mdash; Have a great day!
+    Made with ❤️ by <a href="https://jasonbrownlee.me">Jason Brownlee</a> and ChatGPT.<br />
+    Powered by <a href="https://github.com/tonyallan/weather-au">BOM Weather API</a> &mdash; Have a great day!
   </div>
 
 
@@ -350,7 +351,7 @@
           const tempDetailsDiv = document.getElementById('currentTempDetails');
           tempDiv.textContent = `${temp.toFixed(1)}°C`;
           tempDiv.style.color = getTempColor(temp); // Apply gradient color based on temperature
-          tempDetailsDiv.textContent = `Observation: ${location} at ${time}`;
+          tempDetailsDiv.textContent = `${location} @ ${time}`;
 
           document.title = `${temp.toFixed(1)}°C`;
         } else {
