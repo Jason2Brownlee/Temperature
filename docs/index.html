@@ -439,7 +439,7 @@
         const iconsRowSummary = document.getElementById('forecastIcons');
 
         daysRow.innerHTML = '<th>Day</th>' + Object.values(dayData).map(day => `<td>${day.day}</td>`).join('');
-        tempsRowSummary.innerHTML = '<td>Min/Max Temp (°C)</td>' + Object.values(dayData).map(day => {
+        tempsRowSummary.innerHTML = '<td>Min | Max (°C)</td>' + Object.values(dayData).map(day => {
           const minTemp = Math.min(...day.temps).toFixed(1);
           const maxTemp = Math.max(...day.temps).toFixed(1);
           return `<td>${minTemp} | <strong>${maxTemp}</strong></td>`;
@@ -502,7 +502,9 @@
                 display: true,
                 text: 'Temperature (°C)'
               },
-              beginAtZero: false
+              beginAtZero: false,
+              min: Math.min(...temperatures) - 1,
+              max: Math.max(...temperatures) + 1
             }
           }
         },
